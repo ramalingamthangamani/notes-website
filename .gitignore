@@ -1,0 +1,38 @@
+# Python virtual environment
+venv/
+.venv/
+
+# Environment variables
+.env
+venv.env
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Dependency lock files (optional, include if you use them)
+poetry.lock
+Pipfile.lock
+
+# Build and deployment artifacts
+dist/
+build/
+*.egg-info/

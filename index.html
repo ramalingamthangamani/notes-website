@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes App with AI Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="container mx-auto p-4 max-w-2xl">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Notes App with AI Search</h1>
+        
+        <!-- Search Bar -->
+        <div class="mb-6">
+            <input id="searchInput" type="text" class="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Search notes...">
+        </div>
+
+        <!-- Note Input Section -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <textarea id="noteInput" class="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" rows="4" placeholder="Write your note here..."></textarea>
+            <button id="saveNote" class="mt-4 w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition">Save Note</button>
+        </div>
+
+        <!-- Notes List Section -->
+        <div id="notesList" class="space-y-4">
+            <!-- Notes will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <script>
+        // Load notes when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            loadNotes();
+            document.getElementById('searchInput').addEventListener('input', searchNotes);
+            document.getElementById('saveNote').addEventListener('click', saveNoteHandler);
+        });
+
+        // Save note to backend
+        async function saveNoteHandler() {
+            const noteInput = document.getElementById('noteInput');
+            const noteText = noteInput.value.trim();
+            
+            if (noteText === '') {
+                alert('Please enter a note before saving.');
+                return;
+            }
+
+            const note = {
+                id: Date.now(),
+                content: noteText,
+                timestamp: new Date().toLocaleString()
+            };
+
+            try {
+                await fetch('http://localhost:8000/notes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(note)
+                });
+                noteInput.value = '';
+                loadNotes();
+            } catch (error) {
+                alert('Error saving note: ' + error.message);
+            }
+        }
+
+        // Load notes from backend
+        async function loadNotes(searchQuery = '') {
+            const notesList = document.getElementById('notesList');
+            try {
+                let url = 'http://localhost:8000/search';
+                let options = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: searchQuery })
+                };
+
+                if (!searchQuery) {
+                    options = { method: 'GET' }; // Use GET for all notes if no search query
+                }
+
+                const response = await fetch(url, options);
+                const data = await response.json();
+                const notes = searchQuery ? data.results : data.results || [];
+
+                notesList.innerHTML = '';
+                notes.forEach(note => {
+                    const noteElement = document.createElement('div');
+                    noteElement.className = 'bg-white p-4 rounded-lg shadow-md flex justify-between items-start';
+                    noteElement.innerHTML = `
+                        <div>
+                            <p class="text-gray-800">${highlightMatch(note.content, searchQuery)}</p>
+                            <p class="text-sm text-gray-500 mt-2">Saved: ${note.timestamp}</p>
+                        </div>
+                        <button onclick="deleteNote(${note.id})" class="text-red-500 hover:text-red-700">Delete</button>
+                    `;
+                    notesList.appendChild(noteElement);
+                });
+            } catch (error) {
+                console.error('Error loading notes:', error);
+            }
+        }
+
+        // Highlight matching words in note content
+        function highlightMatch(content, query) {
+            if (!query) return content;
+            const words = query.toLowerCase().split(/\s+/);
+            let highlighted = content;
+            words.forEach(word => {
+                const regex = new RegExp(`\\b${word}\\b`, 'gi');
+                highlighted = highlighted.replace(regex, match => `<span class="bg-yellow-200">${match}</span>`);
+            });
+            return highlighted;
+        }
+
+        // Search notes via backend
+        async function searchNotes() {
+            const searchQuery = document.getElementById('searchInput').value.trim();
+            loadNotes(searchQuery);
+        }
+
+        // Delete note via backend
+        async function deleteNote(id) {
+            try {
+                await fetch(`http://localhost:8000/notes/${id}`, {
+                    method: 'DELETE'
+                });
+                loadNotes(document.getElementById('searchInput').value.trim());
+            } catch (error) {
+                alert('Error deleting note: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
